@@ -1,84 +1,126 @@
-namespace Treap {
+mt19937 rng(chrono::steady_clock::now().time_since_epoch().count());
+
+template<typename T>
+struct Treap {
     struct Node {
         Node *l, *r;
-        ll key, prio, size;
+        T x;
+        int y, size;
+
         Node() {}
-        Node(ll key) : key(key), l(nullptr), r(nullptr), size(1) {
-            prio = rand() ^ (rand() << 15);
-        }
+
+        Node(T _x) : x(_x), y(rng()), l(nullptr), r(nullptr), size(1) {}
     };
 
-    typedef Node* NodePtr;
+    typedef Node *NodePtr;
+    NodePtr root;
 
-    int sz(NodePtr n) {
-        return n ? n->size : 0;
+    Treap() : root(nullptr) {}
+
+    inline int sz(NodePtr a) const {
+        return a ? a->size : 0;
     }
 
-    void recalc(NodePtr n) {
-        if (!n) return;
-        n->size = sz(n->l) + 1 + sz(n->r); // add more operations here as needed
+    inline void recalc(NodePtr a) {
+        if (!a) return;
+        a->size = sz(a->l) + sz(a->r) + 1;
     }
 
-    void split(NodePtr tree, ll key, NodePtr& l, NodePtr& r) {
-        if (!tree) {
-            l = r = nullptr;
-        }
-        else if (key < tree->key) {
-            split(tree->l, key, l, tree->l);
-            r = tree;
-        }
+
+private:
+    void merge(NodePtr a, NodePtr b, NodePtr &c) {
+        if (!a) c = b;
+        else if (!b) c = a;
         else {
-            split(tree->r, key, tree->r, r);
-            l = tree;
+            if (a->y > b->y) {
+                merge(a->r, b, a->r);
+                c = a;
+            } else {
+                merge(b->l, a, b->l);
+                c = b;
+            }
+            recalc(c);
         }
-        recalc(tree);
     }
 
-    void merge(NodePtr& tree, NodePtr l, NodePtr r) {
-        if (!l || !r) {
-            tree = l ? l : r;
-        }
-        else if (l->prio > r->prio) {
-            merge(l->r, l->r, r);
-            tree = l;
-        }
+    void split(NodePtr c, T k, NodePtr &a, NodePtr &b) {
+        if (!c) { a = b = nullptr; }
         else {
-            merge(r->l, l, r->l);
-            tree = r;
+            if (c->x < k) {
+                split(c->r, k, c->r, b);
+                a = c;
+            } else {
+                split(c->l, k, a, c->l);
+                b = c;
+            }
         }
-        recalc(tree);
+        recalc(c);
     }
 
-    void insert(NodePtr& tree, NodePtr node) {
-        if (!tree) {
-            tree = node;
+    void insert(NodePtr &ptr, NodePtr val) {
+        if (!ptr) ptr = val;
+        else if (ptr->x != val->x) {
+            if (val->y > ptr->y) {
+                split(ptr, val->x, val->l, val->r);
+                ptr = val;
+            } else {
+                if (val->x > ptr->x) insert(ptr->r, val);
+                else insert(ptr->l, val);
+            }
         }
-        else if (node->prio > tree->prio) {
-            split(tree, node->key, node->l, node->r);
-            tree = node;
-        }
-        else {
-            insert(node->key < tree->key ? tree->l : tree->r, node);
-        }
-        recalc(tree);
+        recalc(ptr);
     }
 
-    void erase(NodePtr tree, ll key) {
-        if (!tree) return;
-        if (tree->key == key) {
-            merge(tree, tree->l, tree->r);
-        }
-        else {
-            erase(key < tree->key ? tree->l : tree->r, key);
-        }
-        recalc(tree);
+    void erase(NodePtr ptr, T k) {
+        if (!ptr) return;
+        if (ptr->x == k) {
+            merge(ptr->l, ptr->r, ptr);
+        } else if (ptr->x > k) erase(ptr->l, k);
+        else erase(ptr->r, k);
+        recalc(ptr);
     }
 
-    void print(NodePtr t, bool newline = true) {
-        if (!t) return;
-        print(t->l, false);
-        cout << t->key << " ";
-        print(t->r, false);
-        if (newline) cout << endl;
+    int count(NodePtr ptr, T k) {
+        if (!ptr) return 0;
+        if (ptr->x == k) return 1;
+        if (ptr->x > k) return count(ptr->l, k);
+        else return count(ptr->r, k);
     }
-}
+
+    int order_of_key(NodePtr ptr, T k) {
+        if (!ptr) return 0;
+        if (ptr->x < k) return sz(ptr->l) + 1 + order_of_key(ptr->r, k);
+        else return order_of_key(ptr->l, k);
+    }
+
+    T get_by_id(const NodePtr ptr, int id) const {
+        if (sz(ptr->l) == id) return ptr->x;
+        if (id < sz(ptr->l)) return get_by_id(ptr->l, id);
+        else return get_by_id(ptr->r, id - sz(ptr->l) - 1);
+    }
+
+public:
+    inline unsigned int size() {
+        return sz(root);
+    }
+
+    inline void insert(T k) {
+        insert(root, new Node(k));
+    }
+
+    inline void erase(T k) {
+        erase(root, k);
+    }
+
+    inline int count(T k) {
+        return count(root, k);
+    }
+
+    inline int order_of_key(T k) {
+        return order_of_key(root, k);
+    }
+
+    inline T operator[](int pos) const {
+        return get_by_id(root, pos);
+    }
+};
