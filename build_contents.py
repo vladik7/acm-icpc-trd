@@ -21,14 +21,14 @@ def main():
         # Can be expanded to more langs if needed
     }
     source_path = os.path.join(os.path.normpath(os.getcwd()), "src")
-
+    f = open('contents.tex', 'w')
     for dirname in os.listdir(source_path):
         dirpath = os.path.join(source_path, dirname)
         if not os.path.isdir(dirpath):
             # Might be a file
             continue
         section_name = format_name(remove_number(dirname))
-        print("\section{{{}}}".format(section_name))
+        f.write("\section{{{}}}".format(section_name))
 
         for file in os.listdir(dirpath):
             filepath = os.path.join(dirpath, file)
@@ -42,9 +42,9 @@ def main():
             subsection_name = format_name(remove_number(filename))
             file_relpath = os.path.join(".", os.path.relpath(filepath)).replace("\\", "/")
             if fileext == ".tex":
-                print("{}{{\"{}\"}}".format(include_cmds[fileext], file_relpath))
+                f.write("{}{{\"{}\"}}".format(include_cmds[fileext], file_relpath))
             else:
-                print("{}{{{}}}{{\"{}\"}}".format(include_cmds[fileext], subsection_name, file_relpath))
+                f.write("{}{{{}}}{{\"{}\"}}".format(include_cmds[fileext], subsection_name, file_relpath))
 
 if __name__ == "__main__":
     main()
