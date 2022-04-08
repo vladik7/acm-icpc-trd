@@ -1,83 +1,102 @@
-// Add to segment, get maximum of segment
-struct LazySegTree {
-    int n;
-    vector<ll> t, lazy;
-    LazySegTree(int _n) {
-        n = _n; t = vector<ll>(4*n, 0); lazy = vector<ll>(4*n, 0);
+template<typename T = int, typename TU = int>
+struct SegmentTree {
+    SegmentTree() = default;
+    explicit SegmentTree(const vector<T> &a) {
+        n = (int) a.size();
+        st.resize(4 * n);
+        upd_val.resize(4 * n);
+        upd_fl.resize(4 * n);
+        build(1, 0, n, a);
     }
-    LazySegTree(vector<ll>& arr) {
-        n = _n; t = vector<ll>(4*n, 0); lazy = vector<ll>(4*n, 0);
-        build(arr, 1, 0, n-1); // same as in simple SegmentTree
+
+    explicit SegmentTree(int _n) {
+        n = _n;
+        st.resize(4 * n);
+        upd_val.resize(4 * n);
+        upd_fl.resize(4 * n);
     }
-    void push(int v) {
-        t[v*2] += lazy[v];
-        lazy[v*2] += lazy[v];
-        t[v*2+1] += lazy[v];
-        lazy[v*2+1] += lazy[v];
-        lazy[v] = 0;
+
+    T get(int l, int r) {
+        return get(1, 0, n, l, r);
     }
-    void update(int v, int tl, int tr, int l, int r, ll addend) {
-        if (l > r) 
-            return;
-        if (l == tl && tr == r) {
-            t[v] += addend;
-            lazy[v] += addend;
+
+    T get(int p) {
+        return get(p, p + 1);
+    }
+
+    void upd(int p, TU val) {
+        upd(p, p + 1, val);
+    }
+
+    void upd(int l, int r, TU val) {
+        upd(1, 0, n, l, r, val);
+    }
+
+private:
+    void push(int tv, int tl, int tr) {
+        if (upd_fl[tv] == 1 && tr - tl > 1) {
+            int tm = (tl + tr) >> 1;
+            st[tv * 2] = recalc_on_segment(st[tv * 2], upd_val[tv], tl, tm);
+            st[tv * 2 + 1] = recalc_on_segment(st[tv * 2 + 1], upd_val[tv], tm, tr);
+            if (upd_fl[tv * 2]) upd_val[tv * 2] = upd_push_val(upd_val[tv * 2], upd_val[tv]);
+            else upd_val[tv * 2] = upd_val[tv];
+            if (upd_fl[tv * 2 + 1]) upd_val[tv * 2 + 1] = upd_push_val(upd_val[tv * 2 + 1], upd_val[tv]);
+            else upd_val[tv * 2 + 1] = upd_val[tv];
+            upd_fl[tv * 2] = upd_fl[tv * 2 + 1] = 1;
+            upd_fl[tv] = 0;
+        }
+    }
+
+    inline bool intersect(int l1, int r1, int l2, int r2) {
+        return l1 < r2 && l2 < r1;
+    }
+
+    T get(int tv, int tl, int tr, int l, int r) {
+        if (tl >= l && tr <= r) return st[tv];
+        push(tv, tl, tr);
+        int tm = (tl + tr) >> 1;
+        if (!intersect(tl, tm, l, r)) return get(tv * 2 + 1, tm, tr, l, r);
+        if (!intersect(tm, tr, l, r)) return get(tv * 2, tl, tm, l, r);
+        return merge_nodes(get(tv * 2, tl, tm, l, r), get(tv * 2 + 1, tm, tr, l, r), tl, tr);
+    }
+
+    void build(int tv, int tl, int tr, const vector<T> &a) {
+        if (tr - tl == 1) {
+            st[tv] = a[tl];
         } else {
-            push(v);
-            int tm = (tl + tr) / 2;
-            update(v*2, tl, tm, l, min(r, tm), addend);
-            update(v*2+1, tm+1, tr, max(l, tm+1), r, addend);
-            t[v] = max(t[v*2], t[v*2+1]);
+            int tm = (tl + tr) >> 1;
+            build(tv * 2, tl, tm, a);
+            build(tv * 2 + 1, tm, tr, a);
+            st[tv] = merge_nodes(st[tv * 2], st[tv * 2 + 1], tl, tr);
         }
     }
 
-    int query(int v, int tl, int tr, int l, int r) {
-        if (l > r || r < tl || l > tr) return -OO;
-        if (l <= tl && tr <= r) return t[v];
-        push(v);
-        int tm = (tl + tr) / 2;
-        return max(query(v*2, tl, tm, l, r), 
-                query(v*2+1, tm+1, tr, l, r));
-    }
-};
-
-// Multiply every element on seg. by `addend`, query product of numbers in seg.
-struct ProdTree {
-    int n;
-    vector<ll> t, lazy;
-    ProdTree(int _n) {
-        n = _n; t = vector<ll>(4*n, 1); lazy = vector<ll>(4*n, 1);
-    }
-    void push(int v, int l, int r) {
-        int mid = (l+r)/2;
-        t[v*2] = (t[v*2]*pwr(lazy[v], mid-l+1, MOD))%MOD;
-        lazy[v*2] = (lazy[v*2]*lazy[v])%MOD;
-        t[v*2+1] = (t[v*2+1]*pwr(lazy[v], r-(mid+1)+1, MOD))%MOD;
-        lazy[v*2+1] = (lazy[v*2+1]*lazy[v])%MOD;
-        lazy[v] = 1;
-    }
-    void update(int v, int tl, int tr, int l, int r, ll addend) {
-        if (l > r) 
-            return;
-        if (l == tl && tr == r) {
-            t[v] = (t[v]*pwr(addend, tr-tl+1, MOD))%MOD;
-            lazy[v] = (lazy[v]*addend)%MOD;
+    void upd(int tv, int tl, int tr, int l, int r, TU val) {
+        if (tl >= l && tr <= r) {
+            st[tv] = recalc_on_segment(st[tv], val, tl, tr);
+            if (upd_fl[tv]) upd_val[tv] = upd_push_val(upd_val[tv], val);
+            else upd_val[tv] = val;
+            upd_fl[tv] = 1;
         } else {
-            push(v, tl, tr);
-            int tm = (tl + tr) / 2;
-            update(v*2, tl, tm, l, min(r, tm), addend);
-            update(v*2+1, tm+1, tr, max(l, tm+1), r, addend);
-            t[v] = (t[v*2] * t[v*2+1]) % MOD;
+            push(tv, tl, tr);
+            int tm = (tl + tr) >> 1;
+            if (intersect(tl, tm, l, r)) upd(tv * 2, tl, tm, l, r, val);
+            if (intersect(tm, tr, l, r)) upd(tv * 2 + 1, tm, tr, l, r, val);
+            st[tv] = merge_nodes(st[tv * 2], st[tv * 2 + 1], tl, tr);
         }
     }
 
-    ll query(int v, int tl, int tr, int l, int r) {
-        if (l > r || r < tl || l > tr) return 1;
-        if (l <= tl && tr <= r) {
-            return t[v];
-        }
-        push(v, tl, tr);
-        int tm = (tl + tr) / 2;
-        return (query(v*2, tl, tm, l, min(r, tm)) * query(v*2+1, tm+1, tr, max(l, tm+1), r))%MOD;
+    int n{};
+    vector<T> st;
+    vector<TU> upd_val;
+    vector<char> upd_fl;
+    T merge_nodes(const T &i, const T &j, int tl, int tr) {
+        return i + j;
+    };
+    T recalc_on_segment(const T &i, const TU &j, int tl, int tr) {
+        return i + (tr - tl) * j;
+    };
+    TU upd_push_val(const TU &i, const TU &j, int tl = 0, int tr = 1){
+        return i + j;
     }
 };

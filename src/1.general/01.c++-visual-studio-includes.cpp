@@ -24,6 +24,7 @@
 #pragma comment(linker, "/STACK:360777216")
 
 using LL = long long;
+using ll = long long;
 using ld = long double;
 #define all(x) (x).begin(),(x).end()
 #define rall(x) (x).rbegin(),(x).rend()

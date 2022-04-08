@@ -1,41 +1,37 @@
+template<typename T, class F = function<T(const T &, const T &)>>
 struct SegmentTree {
-    int n;
-    vector<ll> t;
-    const ll IDENTITY = 0; // OO for min, -OO for max, ...
-    ll f(ll a, ll b) {
-        return a+b;
+    int n{};
+    vector<T> st;
+    F merge = [&](const T &i, const T &j) {
+        return i ^ j;
+    };
+    T neutral = 0;
+
+    SegmentTree() = default;
+
+    explicit SegmentTree(const vector<T> &a) {
+        n = (int) a.size();
+        st.resize(2 * (int) a.size());
+        for (int i = 0; i < n; i++) st[i + n] = a[i];
+        for (int i = n - 1; i > 0; i--) st[i] = merge(st[i << 1], st[i << 1 | 1]);
     }
-    SegmentTree(int _n) {
-        n = _n; t = vector<ll>(4*n, IDENTITY);
-    }
-    SegmentTree(vector<ll>& arr) {
-        n = arr.size(); t = vector<ll>(4*n, IDENTITY);
-        build(arr, 1, 0, n-1);
-    }
-    void build(vector<ll>& arr, int v, int tl, int tr) {
-        if(tl == tr) { t[v] = arr[tl]; }
-        else {
-            int tm = (tl+tr)/2;
-            build(arr, 2*v, tl, tm);
-            build(arr, 2*v+1, tm+1, tr);
-            t[v] = f(t[2*v], t[2*v+1]);
+
+    T get(int l, int r) {
+        T resl = neutral, resr = neutral;
+        for (l += n, r += n; l < r; l >>= 1, r >>= 1) {
+            if (l & 1) resl = merge(resl, st[l++]);
+            if (r & 1) resr = merge(st[--r], resr);
         }
+        return merge(resl, resr);
     }
-    // sum(1, 0, n-1, l, r)
-    ll sum(int v, int tl, int tr, int l, int r) {
-        if(l > r) return IDENTITY;
-        if (l == tl && r == tr) return t[v];
-        int tm = (tl+tr)/2;
-        return f(sum(2*v, tl, tm, l, min(r, tm)), sum(2*v+1, tm+1, tr, max(l, tm+1), r));
-    }
-    // update(1, 0, n-1, i, v)
-    void update(int v, int tl, int tr, int pos, ll newVal) {
-        if(tl == tr) { t[v] = newVal; }
-        else {
-            int tm = (tl+tr)/2;
-            if(pos <= tm) update(2*v, tl, tm, pos, newVal);
-            else update(2*v+1, tm+1, tr, pos, newVal);
-            t[v] = f(t[2*v],t[2*v+1]);
+
+    void upd(int p, T val) {
+        for (st[p += n] = val; p > 1; p >>= 1) {
+            if (p & 1) {
+                st[p >> 1] = merge(st[p ^ 1], st[p]);
+            } else {
+                st[p >> 1] = merge(st[p], st[p ^ 1]);
+            }
         }
     }
 };
