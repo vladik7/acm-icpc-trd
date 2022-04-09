@@ -1,44 +1,47 @@
-vector < vector<int> > g, gr; // adjList and reversed adjList
-vector<bool> used;
-vector<int> order, component;
-
-void dfs1 (int v) {
-    used[v] = true;
-    for (size_t i=0; i<g[v].size(); ++i)
-        if (!used[ g[v][i] ])
-            dfs1 (g[v][i]);
-    order.push_back (v);
+void dfs(int v, vvi& g, vi& used, vi &topsort)
+{
+	used[v] = 1;
+	for (auto& to : g[v])
+	{
+		if (!used[to]) dfs(to, g, used, topsort);
+	}
+	topsort.push_back(v);
 }
 
-void dfs2 (int v) {
-    used[v] = true;
-    component.push_back (v);
-    for (size_t i=0; i<gr[v].size(); ++i)
-        if (!used[ gr[v][i] ])
-            dfs2 (gr[v][i]);
+
+void dfs(int v, vvi& g, vi& used, vvi &components)
+{
+	used[v] = 1;
+	components.back().push_back(v);
+	for (auto& to : g[v])
+	{
+		if (!used[to]) dfs(to, g, used, components);
+	}
 }
 
-int main() {
-    int n;
-    // read n
-    for (;;) {
-        int a, b;
-        // read edge a -> b
-        g[a].push_back (b);
-        gr[b].push_back (a);
-    }
+vvi build_scc(vvi& g, vvi &rg)
+{
+	vi used(g.size(), 0);
+	vi rused(rg.size(), 0);
+	vvi components;
+	vi topsort;
+	int n = g.size();
 
-    used.assign (n, false);
-    for (int i=0; i<n; ++i)
-        if (!used[i])
-            dfs1 (i);
-    used.assign (n, false);
-    for (int i=0; i<n; ++i) {
-        int v = order[n-1-i];
-        if (!used[v]) {
-            dfs2 (v);
-            // do something with the found component
-            component.clear(); // components are generated in toposort-order
-        }
-    }
+	for (int i = 1; i < n; i++)
+	{
+		if (used[i]) continue;
+		dfs(i, g, used, topsort);
+	}
+
+	reverse(all(topsort));
+
+	for (int i = 0; i < topsort.size(); i++)
+	{
+		int v = topsort[i];
+		if (rused[v]) continue;
+		components.push_back(vi());
+		dfs(v, rg, rused, components);
+	}
+
+	return components;
 }

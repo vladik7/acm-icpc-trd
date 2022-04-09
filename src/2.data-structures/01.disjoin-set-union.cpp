@@ -1,27 +1,24 @@
-struct DSU {
-    vector<int> par;
-    vector<int> sz;
+class DSU
+{
+private:
+	vector<int> p;
+public:
+	DSU(int sz) { p.resize(sz); }
 
-    DSU(int n) {
-        FOR(i, 0, n) {
-            par.pb(i);
-            sz.pb(1);
-        }
-    }
+	void make_set(int v) {
+		p[v] = v;
+	}
 
-    int find(int a) {
-        return par[a] = par[a] == a ? a : find(par[a]);
-    }
+	int get(int v) {
+		return (v == p[v]) ? v : (p[v] = get(p[v]));
+	}
 
-    bool same(int a, int b) {
-        return find(a) == find(b);
-    }
-
-    void unite(int a, int b) {
-        a = find(a);
-        b = find(b);
-        if(sz[a] > sz[b]) swap(a, b);
-        sz[b] += sz[a];
-        par[a] = b;
-    }
+	void unite(int a, int b) {
+		a = get(a);
+		b = get(b);
+		if (rand() & 1)
+			swap(a, b);
+		if (a != b)
+			p[a] = b;
+	}
 };
